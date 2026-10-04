@@ -1,0 +1,1245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Electrical Layout</title>
+
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:Arial, sans-serif;
+    background:#f2f2f2;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    min-height:100vh;
+}
+
+.container{
+    position:relative;
+    width:1200px;
+    max-width:95vw;
+}
+
+.floorplan{
+    width:100%;
+    display:block;
+    border:2px solid #333;
+}
+
+.hotspot{
+    position:absolute;
+    width:18px;
+    height:18px;
+    background:orange;
+    border:3px solid white;
+    border-radius:50%;
+    cursor:pointer;
+    transform:translate(-50%, -50%);
+    z-index:5;
+}
+
+.hotspot:hover{
+    transform:translate(-50%, -50%) scale(1.3);
+}
+
+.popup{
+    display:none;
+    position:fixed;
+    left:0;
+    top:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.6);
+    z-index:1000;
+}
+
+.popup-content{
+    background:white;
+    width:500px;
+    max-width:95%;
+    margin:50px auto;
+    border-radius:10px;
+    overflow:hidden;
+}
+
+.popup-content img{
+    width:100%;
+    height:300px;
+    object-fit:contain;
+    background:#f5f5f5;
+    padding:10px;
+}
+
+.popup-body{
+    padding:20px;
+}
+
+.close-btn{
+    width:100%;
+    padding:12px;
+    border:none;
+    background:#ff6a00;
+    color:white;
+    font-size:16px;
+    cursor:pointer;
+}
+
+/* Full Screen Blur Overlay */
+.room-popup{
+    display:none;
+    position:fixed;
+    left:0;
+    top:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.4);
+    backdrop-filter:blur(8px);
+    z-index:5000;
+
+    justify-content:center;
+    align-items:center;
+}
+
+/* Popup Box */
+.room-popup-content{
+    position:relative;
+    background:white;
+    padding:15px;
+    border-radius:12px;
+    max-width:90%;
+    max-height:90%;
+    box-shadow:0 0 20px rgba(0,0,0,0.4);
+}
+
+.room-popup-content img{
+    max-width:100%;
+    max-height:80vh;
+    display:block;
+    border-radius:10px;
+}
+
+/* Back Button */
+.back-btn{
+    position:absolute;
+    top:-15px;
+    right:-15px;
+    width:40px;
+    height:40px;
+    border:none;
+    border-radius:50%;
+    background:#ff6a00;
+    color:white;
+    font-size:20px;
+    cursor:pointer;
+}
+.room-hotspot{
+position:absolute;
+width:22px;
+height:22px;
+background:orange;
+border:3px solid white;
+border-radius:50%;
+cursor:pointer;
+z-index:50;
+}
+
+.room-hotspot:hover{
+transform:scale(1.4);
+}
+.side-panel{
+    display:none;
+    position:absolute;
+
+    top:50%;
+    left:50%;
+
+    transform:translate(-50%, -50%);
+
+    width:700px;
+    height:500px;
+
+    background:white;
+    border-radius:12px;
+
+    box-shadow:0 0 30px rgba(0,0,0,0.6);
+
+    z-index:100000;
+}
+
+.side-panel img{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+	border-radius:12px;
+}
+
+.side-close{
+    position:absolute;
+    top:10px;
+    right:10px;
+
+    width:35px;
+    height:35px;
+
+    border:none;
+    border-radius:50%;
+
+    background:#ff6a00;
+    color:white;
+
+    cursor:pointer;
+    font-size:18px;
+    font-weight:bold;
+}
+@media (max-width:768px){
+
+    .hotspot{
+        width:14px;
+        height:14px;
+    }
+
+    .room-hotspot{
+        width:18px;
+        height:18px;
+    }
+
+    .back-btn{
+        width:35px;
+        height:35px;
+        font-size:16px;
+    }
+
+    .side-close{
+        width:32px;
+        height:32px;
+        font-size:16px;
+    }
+
+    .side-panel{
+        width:95vw;
+        height:70vh;
+    }
+
+    .popup-content{
+        width:95%;
+    }
+}
+
+.all-images-content{
+    width:90vw;
+    height:90vh;
+    overflow:auto;
+}
+
+.image-grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:15px;
+}
+
+.top-image{
+    grid-column:1 / span 3;
+}
+
+.image-grid img{
+    width:100%;
+    height:250px;
+    object-fit:contain;
+    border:2px solid #ddd;
+    border-radius:10px;
+    background:#fff;
+}
+/* Summary Button */
+.info-btn{
+    position:fixed;
+    top:20px;
+    left:20px;   /* Changed from right to left */
+    background:#ff6a00;
+    color:#fff;
+    border:none;
+    padding:12px 20px;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:15px;
+    font-weight:bold;
+    z-index:99999;
+    box-shadow:0 4px 15px rgba(0,0,0,0.3);
+}
+
+.info-btn:hover{
+    background:#e55f00;
+}
+
+/* Summary Popup */
+.summary-popup{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.65);
+    backdrop-filter:blur(4px);
+    z-index:999999;
+    overflow:auto;
+}
+
+.summary-content{
+    background:#fff;
+    width:95%;
+    max-width:1000px;
+    margin:30px auto;
+    border-radius:15px;
+    padding:25px;
+}
+
+.summary-content h2{
+    text-align:center;
+    margin-bottom:20px;
+    color:#ff6a00;
+}
+
+.section{
+    border:1px solid #ddd;
+    border-radius:10px;
+    margin-bottom:15px;
+    padding:15px;
+    background:#fafafa;
+}
+
+.section h3{
+    color:#ff6a00;
+    margin-bottom:10px;
+}
+
+.total-section{
+    background:#fff1e6;
+    border:2px solid #ff6a00;
+}
+
+.summary-close{
+    position:sticky;
+    top:0;
+    float:right;
+    background:red;
+    color:white;
+    border:none;
+    width:40px;
+    height:40px;
+    border-radius:50%;
+    cursor:pointer;
+    font-size:18px;
+}
+.summary-table{
+    width:100%;
+    border-collapse:collapse;
+    text-align:center;
+    margin-bottom:20px;
+    table-layout:fixed;
+}
+
+.summary-table th{
+    background:#ff6a00;
+    color:white;
+    padding:12px;
+    border:1px solid #ddd;
+}
+
+.summary-table td{
+    padding:10px;
+    border:1px solid #ddd;
+}
+
+.summary-table tr:nth-child(even){
+    background:#f9f9f9;
+}
+
+.summary-table tr:hover{
+    background:#fff3e8;
+}
+</style>
+
+</head>
+<body>
+
+<div class="container">
+
+<button class="info-btn" onclick="openSummary()">
+    📊 Electrical Dashboard
+</button>
+
+<!-- Project Summary Popup -->
+<div id="summaryPopup" class="summary-popup">
+
+<div class="summary-content">
+
+<button class="summary-close"
+onclick="closeSummary()">✕</button>
+
+<h2>Electrical Project Summary</h2>
+<div class="section total-section">
+
+<h3>⚡ Grand Total Summary</h3>
+
+<table class="summary-table">
+
+    <tr style="background:#ff6a00; color:white;">
+        <th colspan="2" style="padding:10px;">Wire Requirement</th>
+    </tr>
+
+    <tr>
+        <td style="padding:8px; border:1px solid #ddd;">Total Wire Length</td>
+        <td style="padding:8px; border:1px solid #ddd;">704 Ft</td>
+    </tr>
+
+    <tr>
+        <td style="padding:8px; border:1px solid #ddd;">Recommended Length</td>
+        <td style="padding:8px; border:1px solid #ddd;">750 Ft</td>
+    </tr>
+
+    <tr>
+        <td style="padding:8px; border:1px solid #ddd;">In Meter</td>
+        <td style="padding:8px; border:1px solid #ddd;">229 M</td>
+    </tr>
+
+</table>
+
+<br>
+
+<table class="summary-table">
+
+    <tr style="background:#ff6a00; color:white;">
+        <th colspan="2" style="padding:10px;">Wire Bundle Requirement</th>
+    </tr>
+
+    <tr>
+        <td style="padding:8px; border:1px solid #ddd;">1 MM Wire</td>
+        <td style="padding:8px; border:1px solid #ddd;">2 Bundles</td>
+    </tr>
+
+    <tr>
+        <td style="padding:8px; border:1px solid #ddd;">1.5 MM Wire</td>
+        <td style="padding:8px; border:1px solid #ddd;">4 Bundles</td>
+    </tr>
+
+    <tr>
+        <td style="padding:8px; border:1px solid #ddd;">2.5 MM Wire</td>
+        <td style="padding:8px; border:1px solid #ddd;">4 Bundles</td>
+    </tr>
+
+    <tr>
+        <td style="padding:8px; border:1px solid #ddd;">4 MM Wire</td>
+        <td style="padding:8px; border:1px solid #ddd;">2-3 Bundles</td>
+    </tr>
+
+</table>
+
+<br>
+
+<table class="summary-table">
+
+    <tr style="background:#ff6a00; color:white;">
+        <th>Module Box</th>
+        <th>Quantity</th>
+    </tr>
+
+    <tr><td style="border:1px solid #ddd;padding:8px;">2M Box</td><td style="border:1px solid #ddd;">2</td></tr>
+    <tr><td style="border:1px solid #ddd;padding:8px;">3M Box</td><td style="border:1px solid #ddd;">10</td></tr>
+    <tr><td style="border:1px solid #ddd;padding:8px;">4M Box</td><td style="border:1px solid #ddd;">9</td></tr>
+    <tr><td style="border:1px solid #ddd;padding:8px;">6M Box</td><td style="border:1px solid #ddd;">10</td></tr>
+    <tr><td style="border:1px solid #ddd;padding:8px;">12M Box</td><td style="border:1px solid #ddd;">1</td></tr>
+
+</table>
+
+<br>
+
+<table class="summary-table">
+
+    <tr style="background:#ff6a00; color:white;">
+        <th>Accessory</th>
+        <th>Quantity</th>
+    </tr>
+
+    <tr><td style="border:1px solid #ddd;padding:8px;">Switch</td><td style="border:1px solid #ddd;">44</td></tr>
+    <tr><td style="border:1px solid #ddd;padding:8px;">Two-Way Switch</td><td style="border:1px solid #ddd;">20</td></tr>
+    <tr><td style="border:1px solid #ddd;padding:8px;">5 Pin Socket</td><td style="border:1px solid #ddd;">36</td></tr>
+    <tr><td style="border:1px solid #ddd;padding:8px;">Fan Regulator</td><td style="border:1px solid #ddd;">6</td></tr>
+
+</table>
+
+</div>
+<div class="section">
+<h3>Drawing Room</h3>
+<p>
+2 × 3M Box<br>
+1 × 2M Box<br>
+2 × 6M Box<br>
+1 × 12M Box
+</p>
+<br>
+<p>
+13 Switch<br>
+9 × 5Pin Socket<br>
+1 Fan Regulator
+</p>
+</div>
+
+<div class="section">
+<h3>Room 1</h3>
+<p>
+2 × 6M Box<br>
+2 × 3M Box<br>
+1 × 4M Box
+</p>
+<br>
+<p>
+7 Switch<br>
+4 Two-Way Switch<br>
+5 × 5Pin Socket<br>
+1 Fan Regulator
+</p>
+</div>
+
+<div class="section">
+<h3>Room 2</h3>
+<p>
+1 × 6M Box<br>
+1 × 3M Box<br>
+2 × 4M Box
+</p>
+<br>
+<p>
+6 Switch<br>
+2 Two-Way Switch<br>
+4 × 5Pin Socket<br>
+1 Fan Regulator
+</p>
+</div>
+
+<div class="section">
+<h3>Room 3</h3>
+<p>
+2 × 6M Box<br>
+2 × 3M Box<br>
+1 × 4M Box
+</p>
+<br>
+<p>
+7 Switch<br>
+4 Two-Way Switch<br>
+5 × 5Pin Socket<br>
+1 Fan Regulator
+</p>
+</div>
+
+<div class="section">
+<h3>Room 4</h3>
+<p>
+2 × 6M Box<br>
+2 × 3M Box<br>
+1 × 4M Box
+</p>
+<br>
+<p>
+7 Switch<br>
+4 Two-Way Switch<br>
+5 × 5Pin Socket<br>
+1 Fan Regulator
+</p>
+</div>
+
+<div class="section">
+<h3>Corridor</h3>
+<p>
+1 × 2M Box<br>
+1 × 3M Box<br>
+4 × 4M Box<br>
+1 × 6M Box
+</p>
+<br>
+<p>
+6 Two-Way Switch<br>
+4 Switch<br>
+8 × 5Pin Socket<br>
+1 Fan Regulator
+</p>
+</div>
+
+</div>
+</div>
+    <!-- FLOOR PLAN IMAGE -->
+    <img src="Total wire drawing.png"
+         alt="Electrical Drawing"
+         class="floorplan">
+
+
+
+    <!-- Room Image Popup -->
+<div id="roomPopup" class="room-popup">
+
+    <div class="room-popup-content">
+
+        <button class="back-btn"
+                onclick="closeRoomImage()">
+            ✕
+        </button>
+
+        <img id="roomImage"
+             src=""
+             alt="Room Layout">
+		<!-- Side Panel -->
+
+<div id="sidePanel" class="side-panel">
+
+    <button class="side-close"
+            onclick="closeSidePanel()">
+        ✕
+    </button>
+
+    <img id="sidePanelImage"
+         src=""
+         alt="Wall Image">
+
+</div>
+
+		
+<div id="dotCenter" class="room-hotspot"
+     onclick="openSidePanel('Center.jpg')">
+</div>
+
+<div id="dotLeft" class="room-hotspot"
+     onclick="openSidePanel('LeftWall.jpg')">
+</div>
+
+<div id="dotFront" class="room-hotspot"
+     onclick="openSidePanel('FrontWall.jpg')">
+</div>
+
+<div id="dotRight" class="room-hotspot"
+     onclick="openSidePanel('RightWall.jpg')">
+</div>
+
+<div id="dotBack" class="room-hotspot"
+     onclick="openSidePanel('BackWall.jpg')">
+</div>
+
+    </div>
+
+</div>
+
+	<!-- Drawing Room -->
+	<!-- Drawing Room Center Square -->
+<div id="frontViewPopup" class="room-popup">
+
+    <div class="room-popup-content">
+
+        <button class="back-btn"
+                onclick="closeFrontView()">
+            ✕
+        </button>
+
+        <img id="frontViewImage"
+             src=""
+             alt="Front View">
+
+    </div>
+
+</div>
+<div class="hotspot"
+     style="
+     left:8%;
+     top:44.5%;
+	 background:red"
+     onclick="showFrontView('Image1.jpg')">
+</div>
+	
+    <div class="hotspot" style="left: 34.8%;top: 36.5%;" onclick="showInfo('DR_Entrance')">
+    </div>
+	<div class="hotspot" style="left: 34.5%;top: 31%;" onclick="showInfo('Behind_TV')">
+    </div>
+	<div class="hotspot" style="left: 33.5%;top: 14.5%;" onclick="showInfo('DR_1')">
+    </div>
+	<div class="hotspot" style="left: 11.7%;top: 14%;" onclick="showInfo('DR_2')">
+    </div>
+	
+	
+	
+	<!-- Main Image Center Orange Dot -->
+<div class="hotspot" style="left:30.5%; top:49.8%;" onclick="showAllImages()">
+</div>
+
+<div class="hotspot" style="left: 88.5%;top: 41.8%;" onclick="showInfo('Board1')">
+</div>
+<div class="hotspot" style="left: 76.5%;top: 55.8%;" onclick="showInfo('Board2')">
+</div>
+<div class="hotspot" style="left: 72.2%;top: 41.8%;" onclick="showInfo('Board3')">
+</div>
+<div class="hotspot" style="left:43.8%; top:41.8%;" onclick="showInfo('Board4')">
+</div>
+<div class="hotspot" style="left:43.8%; top:55.8%;" onclick="showInfo('Board5')">
+</div>
+<div class="hotspot" style="left: 10.7%;top: 41%;" onclick="showInfo('Board6')">
+    </div>
+<div class="hotspot" style="left: 20%;top: 55.8%;" onclick="showInfo('Board7')">
+</div>
+<div class="hotspot" style="left: 11.4%;top: 55.8%;" onclick="showInfo('Board8')">
+</div>
+
+<!-- All Images Popup -->
+
+<div id="allImagesPopup" class="room-popup">
+
+    <div class="room-popup-content all-images-content">
+
+        <button class="back-btn"
+                onclick="closeAllImages()">
+            ✕
+        </button>
+
+    <div class="image-grid">
+
+    <!-- Top Image -->
+    <img src="Image4.png" alt="Image 4" class="top-image">
+
+    <!-- Bottom Images -->
+    <img src="Image1.jpg" alt="Image 1">
+    <img src="Image2.jpg" alt="Image 2">
+    <img src="Image3.jpg" alt="Image 3">
+
+</div>
+
+
+    </div>
+
+</div>
+	
+    <!-- Room_1 -->
+	
+	<!-- Room 1 Center Square -->
+<div class="hotspot"
+     style="
+     left:49%;
+     top:26.5%;
+     width:25px;
+     height:25px;
+     background:#2e2d2d;
+     border-radius:4px;"
+     onclick="showRoomImage('Room1.png')">
+</div>
+	
+    <div class="hotspot" style="left: 43.8%;top: 39.5%;" onclick="showInfo('Main_Entrance')">
+    </div>
+	<div class="hotspot" style="left: 43%;top: 14.4%;" onclick="showInfo('Bedside1')">
+    </div>
+	<div class="hotspot" style="left: 54.5%;top: 14.4%;" onclick="showInfo('Bedside2')">
+    </div>
+	<div class="hotspot" style="left: 62.7%;top: 37%;" onclick="showInfo('Mirror')">
+    </div>
+	<div class="hotspot" style="left: 36.5%;top: 26.5%;" onclick="showInfo('Blank_wall')">
+    </div>
+
+    <!-- Room_2 -->
+	
+	<div class="hotspot"
+     style="
+     left:79.4%;
+     top:26.5%;
+     width:25px;
+     height:25px;
+     background:#2e2d2d;
+     border-radius:4px;"
+     onclick="showRoomImage('Room2.png')">
+</div>
+	
+    <div class="hotspot" style="left: 70.2%;top: 39.5%;" onclick="showInfo('Room2_Enterance')">
+    </div>
+	<div class="hotspot" style="left: 66.7%;top: 14.4%;" onclick="showInfo('Room2_FrontWall')">
+    </div>
+	<div class="hotspot" style="left: 91%;top: 26.5%;" onclick="showInfo('Room2_RightSideWall')">
+    </div>
+	<div class="hotspot" style="left: 64.5%;top: 25.5%;" onclick="showInfo('Blank_wall')">
+    </div>
+	
+	<!-- Room_3 -->
+	<div class="hotspot"
+     style="
+     left:49%;
+     top:71.5%;
+     width:25px;
+     height:25px;
+     background:#2e2d2d;
+     border-radius:4px;"
+     onclick="showRoomImage('Room3_4.png')">
+</div>
+    <div class="hotspot" style="left: 43.8%;top: 58.5%;" onclick="showInfo('Main_Entrance')">
+    </div>
+	<div class="hotspot" style="left: 43%;top: 83.5%;" onclick="showInfo('Bedside1')">
+    </div>
+	<div class="hotspot" style="left: 55%;top: 83.5%;" onclick="showInfo('Bedside2')">
+    </div>
+	<div class="hotspot" style="left: 62.8%;top: 61%;" onclick="showInfo('Mirror')">
+    </div>
+	<div class="hotspot" style="left: 36.6%;top: 71%;" onclick="showInfo('Blank_wall')">
+    </div>
+	
+	<!-- Room_4 -->
+	<div class="hotspot"
+     style="
+     left:77%;
+     top:71.5%;
+     width:25px;
+     height:25px;
+     background:#2e2d2d;
+     border-radius:4px;"
+     onclick="showRoomImage('Room3_4.png')">
+</div>
+    <div class="hotspot" style="left: 71.7%;top: 58.5%;" onclick="showInfo('Main_Entrance')">
+    </div>
+	<div class="hotspot" style="left: 90.6%;top: 61%;" onclick="showInfo('Mirror')">
+    </div>
+	<div class="hotspot" style="left: 71%;top: 83.5%;" onclick="showInfo('Bedside1')">
+    </div>
+	<div class="hotspot" style="left: 83%;top: 83.5%;" onclick="showInfo('Bedside2')">
+    </div>
+	<div class="hotspot" style="left: 64.6%;top: 71%;" onclick="showInfo('Blank_wall')">
+    </div>
+
+</div>
+
+<!-- POPUP -->
+<div id="popup" class="popup">
+
+    <div class="popup-content">
+
+        <img id="popupImage" src="" alt="">
+
+        <div class="popup-body">
+
+            <h2 id="popupTitle"></h2>
+				<b>Location:</b>
+                <span id="popupLocation"></span>
+            </p>
+
+            <br>
+
+            <p>
+                <b>Description:</b>
+                <span id="popupDescription"></span>
+            </p>
+
+            <br>
+
+            <p>
+                <b>Module Box:</b>
+                <span id="popupM_Box"></span>
+            </p>
+
+            <br>
+
+            <p>
+                <b>Total:</b>
+                <span id="popupTotal"></span>
+            </p>
+
+        </div>
+
+        <button class="close-btn" onclick="closePopup()">
+            Close
+        </button>
+
+    </div>
+
+</div>
+
+<script>
+
+const electricalPoints = {
+
+
+    Main_Entrance:{
+        title:"Room's Main Entrance Board",
+        image:"Image (23).jpg",
+        location:"Room",
+        description:"2 two-way Switch(Control 2-2 light), 2 Switch(Fan and socket), 1 5Pin socket",
+        m_box:"6M Box",
+        total:"2 Two-way Switch, 2 Switch, 1 5Pin socket"
+    },
+	
+	Bedside1:{
+        title:"Bedside 1",
+        image:"Image (21).jpg",
+        location:"Bedside1 Board",
+        description:"2 two-way Switch(Control 2-2 light), 1 Extra Switch, 1 Fan Regulater, 1 5Pin socket",
+        m_box:"6M Box",
+        total:"2 Two-way Switch, 1 Switch, 1 Regulater, 1 5Pin socket"
+    },
+	Bedside2:{
+        title:"Bedside 2",
+        image:"Image (20).jpg",
+        location:"Bedside2 Board",
+        description:"1 Socket Control, 1 5Pin socket",
+        m_box:"3M Box",
+        total:"1 Switch, 1 5Pin socket"
+    },
+	Mirror:{
+        title:"Mirror Point",
+        image:"Image (18).jpg",
+        location:"Mirror table Wall",
+        description:"2 Switch(Mirror Light, Socket), 1 5Pin socket",
+        m_box:"4M Box",
+        total:"2 Switch, 1 5Pin socket"
+    },
+	
+	Blank_wall:{
+        title:"Blank wall Point",
+        image:"Image (19).jpg",
+        location:"Blank wall",
+        description:"1 Switch, 1 5Pin socket",
+        m_box:"3M Box",
+        total:"1 Switch, 1 5Pin socket"
+    },
+	Room2_Enterance:{
+        title:"Room2 Main Entrance Board",
+        image:"Image (21).jpg",
+        location:"Room2",
+        description:"2 two-way Switch(Control 2-2 light), 1 Extra Switch, 1 Fan Regulater, 1 5Pin socket",
+        m_box:"6M Box",
+        total:"2 Two-way Switch, 1 Switch, 1 Regulater, 1 5Pin socket"
+    },
+	Room2_FrontWall:{
+        title:"Room 2 Front wall",
+        image:"Image (18).jpg",
+        location:"Room 2 Front wall",
+        description:"2 Switch(1 Extra, Socket), 1 5Pin socket",
+        m_box:"4M Box",
+        total:"2 Switch, 1 5Pin socket"
+    },
+	Room2_RightSideWall:{
+        title:"Room 2 Right Side wall",
+        image:"Image (18).jpg",
+        location:"Room 2 Right Side wall",
+        description:"2 Switch(1 Extra, Socket), 1 5Pin socket",
+        m_box:"4M Box",
+        total:"2 Switch, 1 5Pin socket"
+    },
+	
+	DR_Entrance:{
+        title:"Drawing Room Entrance Board",
+        image:"Image (14).jpg",
+        location:"Drawing Room",
+        description:"Switch:- 2 Light Control(L1,L2), 1 Fan, 2 socket control, 2 Extra | Socket:- 2 - 5Pin | 1 Fan Regulater",
+        m_box:"12 M Box",
+        total:"7 Switch, 1 Fan Regulater, 2 5Pin Socket"
+    },
+	
+	Behind_TV:{
+        title:"TV Pannel",
+        image:"TV Pannel.jpg",
+        location:"TV Wall",
+        description:"1- 5Pin Socket Behind TV | 4- Switch (TV, SetBox, S2,S3{Under table Socket}) & 1 5Pin Socket | 3- 5Pin Socket (SetBox, S2, S3)",
+        m_box:"2M Box- TV, 6M Box- Above Table, 6M Box- Under Table",
+        total:"4 Switch, 5 5Pin Socket"
+    },
+	
+	DR_1:{
+        title:"Drawing Room Board 1 (Right Side)",
+        image:"Image (13).jpg",
+        location:"Drawing Room Right Side",
+        description:"1 5Pin Socket and 1 Socket Control",
+        m_box:"3M Box",
+        total:"1 Switch, 1 5Pin Socket"
+    },
+	DR_2:{
+        title:"Drawing Room Board 2 (Left Side)",
+        image:"Image (12).jpg",
+        location:"Drawing Room Left Side",
+        description:"1 5Pin Socket and 1 Socket Control",
+        m_box:"3M Box",
+        total:"1 Switch, 1 5Pin Socket"
+    },
+
+	Board1:{
+        title:"Board1 Point",
+        image:"Image (9).jpg",
+        location:"Corridor Last",
+        description:"5Pin Socket",
+        m_box:"4M Box",
+        total:"2 5Pin Socket"
+    },
+	Board2:{
+        title:"Board3 Point",
+        image:"Image (7).jpg",
+        location:"Corridor",
+        description:"1 5Pin socket",
+        m_box:"2M Box",
+        total:"1 5Pin socket"
+    },
+	Board3:{
+        title:"Board2 Point",
+        image:"Image (8).jpg",
+        location:"Corridor",
+        description:"2 two-way Switch to control Upper and Mid Light, 1 5Pin Socket",
+        m_box:"4M Box",
+        total:"2 Two-way Switch, 1 5Pin Socket"
+    },
+	Board4:{
+        title:"Board4 Point",
+        image:"Image (6).jpg",
+        location:"Corridor",
+        description:"2 two-way Switch to control Upper and Mid Light, 1 5Pin Socket",
+        m_box:"4M Box",
+        total:"2 Two-way Switch, 1 5Pin Socket"
+    },
+	Board5:{
+        title:"Board5 Point",
+        image:"Image (4).jpg",
+        location:"Corridor",
+        description:"1 Fan Switch, 1 5Pin Socket",
+        m_box:"3M Box",
+        total:"1 Switch, 1 5Pin socket"
+    },
+	Board6:{
+        title:"Board6 Point",
+        image:"Image (3).jpg",
+        location:"Corridor Entrance",
+        description:"3 Switch(1 All Corridor light, 1 Extra, 1 Fan), 1 Fan Regulater, 1 5Pin socket",
+        m_box:"6M Box",
+        total:"3 Switch, 1 Regulater, 1 5Pin socket"
+    },
+	Board7:{
+        title:"Board7 Point",
+        image:"Image (2).jpg",
+        location:"Kitchen Wall",
+        description:"2 two-way Switch to control Upper and Mid Light, 1 5Pin Socket",
+        m_box:"4M Box",
+        total:"2 Two-way Switch, 1 5Pin Socket"
+    },
+	Board8:{
+        title:"Board8 Point",
+        image:"Image (1).jpg",
+        location:"MCB Box Kitchen Wall",
+        description:"MCB Box",
+        m_box:"MCB Box (*Don't Know*)",
+        total:"MCB Box (*Don't Know*)"
+    }
+
+};
+
+function showInfo(id){
+
+    document.getElementById("popupTitle").textContent =
+        electricalPoints[id].title;
+
+    document.getElementById("popupImage").src =
+        electricalPoints[id].image;
+
+    document.getElementById("popupLocation").textContent =
+        electricalPoints[id].location;
+
+    document.getElementById("popupDescription").textContent =
+        electricalPoints[id].description;
+
+    document.getElementById("popupM_Box").textContent =
+        electricalPoints[id].m_box;
+
+    document.getElementById("popupTotal").textContent =
+        electricalPoints[id].total;
+
+    document.getElementById("popup").style.display = "block";
+}
+
+function closePopup(){
+    document.getElementById("popup").style.display = "none";
+}
+
+window.onclick = function(event){
+    if(event.target === document.getElementById("popup")){
+        closePopup();
+    }
+}
+function showRoomImage(imageName){
+
+    document.getElementById("roomImage").src = imageName;
+
+    const leftDot = document.getElementById("dotLeft");
+    const frontDot = document.getElementById("dotFront");
+    const rightDot = document.getElementById("dotRight");
+    const backDot = document.getElementById("dotBack");
+    const centerDot = document.getElementById("dotCenter");
+	
+	// Reset all dots visible
+leftDot.style.display = "block";
+frontDot.style.display = "block";
+rightDot.style.display = "block";
+backDot.style.display = "block";
+centerDot.style.display = "block";
+
+    // ROOM 1
+    if(imageName === "Room1.png"){
+
+        leftDot.style.left="18%";
+        leftDot.style.top="45%";
+
+        frontDot.style.left="46%";
+        frontDot.style.top="12%";
+
+        rightDot.style.left="71%";
+        rightDot.style.top="45%";
+
+        backDot.style.left="45%";
+        backDot.style.top="77%";
+
+        centerDot.style.left="46%";
+        centerDot.style.top="45%";
+		
+		// Room1 and Room2
+frontDot.setAttribute(
+    "onclick",
+    "openSidePanel('FrontWall.jpg')"
+);
+
+backDot.setAttribute(
+    "onclick",
+    "openSidePanel('BackWall.jpg')"
+);
+
+centerDot.setAttribute(
+    "onclick",
+    "openSidePanel('Center.jpg')"
+);
+
+    }
+
+    // ROOM 2
+    else if(imageName === "Room2.png"){
+
+    leftDot.style.left="19.5%";
+    leftDot.style.top="59%";
+
+    frontDot.style.left="50%";
+    frontDot.style.top="39.8%";
+
+    rightDot.style.left="78.5%";
+    rightDot.style.top="60%";
+
+    backDot.style.left="50%";
+    backDot.style.top="85%";
+
+    centerDot.style.left="49.5%";
+    centerDot.style.top="59%";
+
+    // Reset Front/Back Images
+    frontDot.setAttribute(
+        "onclick",
+        "openSidePanel('FrontWall.jpg')"
+    );
+
+    backDot.setAttribute(
+        "onclick",
+        "openSidePanel('BackWall.jpg')"
+    );
+
+    // Hide Front & Right dots
+    frontDot.style.display = "none";
+    rightDot.style.display = "none";
+
+    leftDot.style.display = "block";
+    backDot.style.display = "block";
+    centerDot.style.display = "block";
+	
+	centerDot.setAttribute(
+    "onclick",
+    "openSidePanel('Center2.jpg')"
+);
+}
+
+    // ROOM 3 AND ROOM 4 SAME POSITIONS
+    else if(imageName === "Room3_4.png"){
+
+    leftDot.style.left="18.5%";
+    leftDot.style.top="50%";
+
+    frontDot.style.left="47%";
+    frontDot.style.top="19%";
+
+    rightDot.style.left="71%";
+    rightDot.style.top="50%";
+
+    backDot.style.left="45%";
+    backDot.style.top="75%";
+
+    centerDot.style.left="45%";
+    centerDot.style.top="48%";
+
+    // Center image for Room3 & Room4
+    centerDot.setAttribute(
+        "onclick",
+        "openSidePanel('Center3_4.jpg')"
+    );
+
+    // Exchange Front and Back images
+    frontDot.setAttribute(
+        "onclick",
+        "openSidePanel('BackWall.jpg')"
+    );
+
+    backDot.setAttribute(
+        "onclick",
+        "openSidePanel('FrontWall.jpg')"
+    );
+}
+	
+    document.getElementById("roomPopup").style.display = "flex";
+}
+
+function closeRoomImage(){
+
+    document.getElementById("roomPopup").style.display = "none";
+}
+
+function openSidePanel(imageName){
+
+    document.getElementById("sidePanelImage").src = imageName;
+
+    document.getElementById("sidePanel").style.display = "block";
+}
+
+function closeSidePanel(){
+
+    document.getElementById("sidePanel").style.display = "none";
+}
+function showFrontView(imageName){
+
+    document.getElementById("frontViewImage").src = imageName;
+
+    document.getElementById("frontViewPopup").style.display = "flex";
+}
+
+function closeFrontView(){
+
+    document.getElementById("frontViewPopup").style.display = "none";
+}
+function showAllImages(){
+
+    document.getElementById("allImagesPopup").style.display = "flex";
+}
+
+function closeAllImages(){
+
+    document.getElementById("allImagesPopup").style.display = "none";
+}
+function openSummary(){
+    document.getElementById("summaryPopup").style.display="block";
+}
+
+function closeSummary(){
+    document.getElementById("summaryPopup").style.display="none";
+}
+</script>
+
+</body>
+</html>
